@@ -33,7 +33,7 @@ Boarding pass content:
 ${content}`
 
   const command = new InvokeModelCommand({
-    modelId: 'anthropic.claude-haiku-4-5-20251001-v1:0',
+    modelId: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
     contentType: 'application/json',
     accept: 'application/json',
     body: JSON.stringify({
@@ -74,7 +74,7 @@ Return ONLY a JSON array of items (15-20 items):
 ]`
 
   const command = new InvokeModelCommand({
-    modelId: 'anthropic.claude-haiku-4-5-20251001-v1:0',
+    modelId: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
     contentType: 'application/json',
     accept: 'application/json',
     body: JSON.stringify({
