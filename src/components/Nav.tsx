@@ -31,14 +31,20 @@ export default function Nav({ onLogoClick, light = false }: NavProps) {
         </span>
       </button>
 
+      {/* Fix 3A: Corporate links to #corporate anchor */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
-        {['How it works', 'Pricing', 'Corporate'].map(link => (
-          <a key={link} style={{
+        {[
+          { label: 'How it works', href: '#' },
+          { label: 'Pricing', href: '#' },
+          { label: 'Corporate', href: '#corporate' },
+        ].map(link => (
+          <a key={link.label} href={link.href} style={{
             color: light ? 'rgba(27,45,79,0.55)' : 'rgba(255,255,255,0.65)',
             fontSize: 13, textDecoration: 'none', cursor: 'pointer', letterSpacing: '0.3px',
             fontWeight: 500, transition: 'color 0.15s'
-          }}>{link}</a>
+          }}>{link.label}</a>
         ))}
+        {/* Fix 1C: "From $59/trip" */}
         <button style={{
           background: '#C9A84C', color: '#1B2D4F', fontSize: 13, fontWeight: 700,
           padding: '8px 20px', borderRadius: 6, border: 'none', cursor: 'pointer',
