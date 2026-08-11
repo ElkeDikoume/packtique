@@ -1,180 +1,179 @@
 import {
-    BedrockRuntimeClient,
-      InvokeModelCommand,
-      } from '@aws-sdk/client-bedrock-runtime'
+  BedrockRuntimeClient,
+  InvokeModelCommand,
+} from '@aws-sdk/client-bedrock-runtime'
 
-      const client = new BedrockRuntimeClient({
-        region: process.env.AWS_REGION ?? 'us-east-1',
-          credentials: {
-              accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-                  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-                    },
-                    })
+const client = new BedrockRuntimeClient({
+  region: process.env.AWS_REGION ?? 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+})
 
-                    // ── Boarding pass extraction ────────────────────────────────────────────────
+// Boarding pass extraction
 
-                    // Accepts either plain text OR a base64 image (set imageBase64 + imageMediaType)
-                    export async function extractBoardingPass(
-                      content: string,
-                        imageBase64?: string,
-                          imageMediaType?: string
-                          ): Promise<TripData> {
-                            const instructionText = `You are extracting travel information from a boarding pass or flight confirmation.
-                            Return ONLY a valid JSON object with these exact fields. If a field cannot be determined, use null.
+// Accepts either plain text OR a base64 image (set imageBase64 + imageMediaType)
+export async function extractBoardingPass(
+  content: string,
+  imageBase64?: string,
+  imageMediaType?: string
+): Promise<TripData> {
+  const instructionText = `You are extracting travel information from a boarding pass or flight confirmation.
+Return ONLY a valid JSON object with these exact fields. If a field cannot be determined, use null.
 
-                            {
-                              "airline": "airline name",
-                                "flight_number": "e.g. AF 011",
-                                  "origin": "city name (IATA code)",
-                                    "destination": "city name (IATA code)",
-                                      "depart_date": "YYYY-MM-DD",
-                                        "return_date": "YYYY-MM-DD or null",
-                                          "fare_class": "Economy / Premium Economy / Business / First",
-                                            "checked_bag_kg": number or null,
-                                              "carry_on_kg": number or null,
-                                                "trip_purpose": "Leisure / Business / null"
-                                                }`
+{
+  "airline": "airline name",
+  "flight_number": "e.g. AF 011",
+  "origin": "city name (IATA code)",
+  "destination": "city name (IATA code)",
+  "depart_date": "YYYY-MM-DD",
+  "return_date": "YYYY-MM-DD or null",
+  "fare_class": "Economy / Premium Economy / Business / First",
+  "checked_bag_kg": number or null,
+  "carry_on_kg": number or null,
+  "trip_purpose": "Leisure / Business / null"
+}`
 
-                                                  type ContentBlock =
-                                                      | { type: 'text'; text: string }
-                                                          | { type: 'image'; source: { type: 'base64'; media_type: string; data: string } }
+  type ContentBlock =
+    | { type: 'text'; text: string }
+    | { type: 'image'; source: { type: 'base64'; media_type: string; data: string } }
 
-                                                            let userContent: ContentBlock[]
+  let userContent: ContentBlock[]
 
-                                                              if (imageBase64 && imageMediaType) {
-                                                                  userContent = [
-                                                                        {
-                                                                                type: 'image',
-                                                                                        source: {
-                                                                                                  type: 'base64',
-                                                                                                            media_type: imageMediaType,
-                                                                                                                      data: imageBase64,
-                                                                                                                              },
-                                                                                                                                    },
-                                                                                                                                          {
-                                                                                                                                                  type: 'text',
-                                                                                                                                                          text: instructionText,
-                                                                                                                                                                },
-                                                                                                                                                                    ]
-                                                                                                                                                                      } else {
-                                                                                                                                                                          userContent = [
-                                                                                                                                                                                {
-                                                                                                                                                                                        type: 'text',
-                                                                                                                                                                                                text: `${instructionText}\n\nBoarding pass content:\n${content}`,
-                                                                                                                                                                                                      },
-                                                                                                                                                                                                          ]
-                                                                                                                                                                                                            }
+  if (imageBase64 && imageMediaType) {
+    userContent = [
+      {
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: imageMediaType,
+          data: imageBase64,
+        },
+      },
+      {
+        type: 'text',
+        text: instructionText,
+      },
+    ]
+  } else {
+    userContent = [
+      {
+        type: 'text',
+        text: `${instructionText}\n\nBoarding pass content:\n${content}`,
+      },
+    ]
+  }
 
-                                                                                                                                                                                                              const command = new InvokeModelCommand({
-                                                                                                                                                                                                                  modelId: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
-                                                                                                                                                                                                                      contentType: 'application/json',
-                                                                                                                                                                                                                          accept: 'application/json',
-                                                                                                                                                                                                                              body: JSON.stringify({
-                                                                                                                                                                                                                                    anthropic_version: 'bedrock-2023-05-31',
-                                                                                                                                                                                                                                          max_tokens: 512,
-                                                                                                                                                                                                                                                messages: [{ role: 'user', content: userContent }],
-                                                                                                                                                                                                                                                    }),
-                                                                                                                                                                                                                                                      })
+  const command = new InvokeModelCommand({
+    modelId: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
+    contentType: 'application/json',
+    accept: 'application/json',
+    body: JSON.stringify({
+      anthropic_version: 'bedrock-2023-05-31',
+      max_tokens: 512,
+      messages: [{ role: 'user', content: userContent }],
+    }),
+  })
 
-                                                                                                                                                                                                                                                        const response = await client.send(command)
-                                                                                                                                                                                                                                                          const body = JSON.parse(new TextDecoder().decode(response.body)) as {
-                                                                                                                                                                                                                                                              content: { text: string }[]
-                                                                                                                                                                                                                                                                }
-                                                                                                                                                                                                                                                                  const text = body.content[0].text
+  const response = await client.send(command)
+  const body = JSON.parse(new TextDecoder().decode(response.body)) as {
+    content: { text: string }[]
+  }
+  const text = body.content[0].text
 
-                                                                                                                                                                                                                                                                    const jsonMatch = text.match(/\{[\s\S]*\}/)
-                                                                                                                                                                                                                                                                      if (!jsonMatch) throw new Error('No JSON in Bedrock extraction response')
-                                                                                                                                                                                                                                                                        return JSON.parse(jsonMatch[0]) as TripData
-                                                                                                                                                                                                                                                                        }
+  const jsonMatch = text.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) throw new Error('No JSON in Bedrock extraction response')
+  return JSON.parse(jsonMatch[0]) as TripData
+}
 
-                                                                                                                                                                                                                                                                        // ── Packing list generation ─────────────────────────────────────────────────
+// Packing list generation
 
-                                                                                                                                                                                                                                                                        export async function generatePackingList(
-                                                                                                                                                                                                                                                                          trip: TripData,
-                                                                                                                                                                                                                                                                            styleContext?: string
-                                                                                                                                                                                                                                                                            ): Promise<PackingItem[]> {
-                                                                                                                                                                                                                                                                              const contextSection = styleContext
-                                                                                                                                                                                                                                                                                  ? `\n\nStyle context from traveler's past trips:\n${styleContext}`
-                                                                                                                                                                                                                                                                                      : ''
+export async function generatePackingList(
+  trip: TripData,
+  styleContext?: string
+): Promise<PackingItem[]> {
+  const contextSection = styleContext
+    ? `\n\nStyle context from traveler's past trips:\n${styleContext}`
+    : ''
 
-                                                                                                                                                                                                                                                                                        const prompt = `You are a professional travel packer. Generate a highly personalized packing list for this trip.
+  const prompt = `You are a professional travel packer. Generate a highly personalized packing list for this trip.
 
-                                                                                                                                                                                                                                                                                        Trip: ${trip.origin ?? 'Unknown'} to ${trip.destination ?? 'Unknown'}
-                                                                                                                                                                                                                                                                                        Dates: ${trip.depart_date ?? 'TBD'} to ${trip.return_date ?? 'one-way'}
-                                                                                                                                                                                                                                                                                        Fare class: ${trip.fare_class ?? 'Economy'}
-                                                                                                                                                                                                                                                                                        Checked bag: ${trip.checked_bag_kg ?? 23}kg
-                                                                                                                                                                                                                                                                                        Carry-on: ${trip.carry_on_kg ?? 7}kg
-                                                                                                                                                                                                                                                                                        Purpose: ${trip.trip_purpose ?? 'Leisure'}${contextSection}
+Trip: ${trip.origin ?? 'Unknown'} to ${trip.destination ?? 'Unknown'}
+Dates: ${trip.depart_date ?? 'TBD'} to ${trip.return_date ?? 'one-way'}
+Fare class: ${trip.fare_class ?? 'Economy'}
+Checked bag: ${trip.checked_bag_kg ?? 23}kg
+Carry-on: ${trip.carry_on_kg ?? 7}kg
+Purpose: ${trip.trip_purpose ?? 'Leisure'}${contextSection}
 
-                                                                                                                                                                                                                                                                                        Return ONLY a JSON array of 15-20 items. No text outside the array.
+Return ONLY a JSON array of 15-20 items. No text outside the array.
 
-                                                                                                                                                                                                                                                                                        [
-                                                                                                                                                                                                                                                                                          {
-                                                                                                                                                                                                                                                                                              "name": "item name",
-                                                                                                                                                                                                                                                                                                  "category": "Clothing | Electronics | Toiletries | Documents",
-                                                                                                                                                                                                                                                                                                      "why": "one short reason tailored to this trip (max 60 chars)",
-                                                                                                                                                                                                                                                                                                          "ai_suggested": true
-                                                                                                                                                                                                                                                                                                            }
-                                                                                                                                                                                                                                                                                                            ]`
+[
+  {
+    "name": "item name",
+    "category": "Clothing | Electronics | Toiletries | Documents",
+    "why": "one short reason tailored to this trip (max 60 chars)",
+    "ai_suggested": true
+  }
+]`
 
-                                                                                                                                                                                                                                                                                                              const command = new InvokeModelCommand({
-                                                                                                                                                                                                                                                                                                                  modelId: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
-                                                                                                                                                                                                                                                                                                                      contentType: 'application/json',
-                                                                                                                                                                                                                                                                                                                          accept: 'application/json',
-                                                                                                                                                                                                                                                                                                                              body: JSON.stringify({
-                                                                                                                                                                                                                                                                                                                                    anthropic_version: 'bedrock-2023-05-31',
-                                                                                                                                                                                                                                                                                                                                          max_tokens: 2048,
-                                                                                                                                                                                                                                                                                                                                                messages: [{ role: 'user', content: prompt }],
-                                                                                                                                                                                                                                                                                                                                                    }),
-                                                                                                                                                                                                                                                                                                                                                      })
+  const command = new InvokeModelCommand({
+    modelId: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
+    contentType: 'application/json',
+    accept: 'application/json',
+    body: JSON.stringify({
+      anthropic_version: 'bedrock-2023-05-31',
+      max_tokens: 2048,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  })
 
-                                                                                                                                                                                                                                                                                                                                                        const response = await client.send(command)
-                                                                                                                                                                                                                                                                                                                                                          const body = JSON.parse(new TextDecoder().decode(response.body)) as {
-                                                                                                                                                                                                                                                                                                                                                              content: { text: string }[]
-                                                                                                                                                                                                                                                                                                                                                                }
-                                                                                                                                                                                                                                                                                                                                                                  const text = body.content[0].text
+  const response = await client.send(command)
+  const body = JSON.parse(new TextDecoder().decode(response.body)) as {
+    content: { text: string }[]
+  }
+  const text = body.content[0].text
 
-                                                                                                                                                                                                                                                                                                                                                                    const jsonMatch = text.match(/\[[\s\S]*\]/)
-                                                                                                                                                                                                                                                                                                                                                                      if (!jsonMatch) throw new Error('No JSON array in packing list response')
-                                                                                                                                                                                                                                                                                                                                                                        return JSON.parse(jsonMatch[0]) as PackingItem[]
-                                                                                                                                                                                                                                                                                                                                                                        }
+  const jsonMatch = text.match(/\[[\s\S]*\]/)
+  if (!jsonMatch) throw new Error('No JSON array in packing list response')
+  return JSON.parse(jsonMatch[0]) as PackingItem[]
+}
 
-                                                                                                                                                                                                                                                                                                                                                                        // ── Titan Embeddings V2 ─────────────────────────────────────────────────────
+// Titan Embeddings V2
 
-                                                                                                                                                                                                                                                                                                                                                                        export async function generateEmbedding(text: string): Promise<number[]> {
-                                                                                                                                                                                                                                                                                                                                                                          const command = new InvokeModelCommand({
-                                                                                                                                                                                                                                                                                                                                                                              modelId: 'amazon.titan-embed-text-v2:0',
-                                                                                                                                                                                                                                                                                                                                                                                  contentType: 'application/json',
-                                                                                                                                                                                                                                                                                                                                                                                      accept: 'application/json',
-                                                                                                                                                                                                                                                                                                                                                                                          body: JSON.stringify({ inputText: text, dimensions: 1536, normalize: true }),
-                                                                                                                                                                                                                                                                                                                                                                                            })
+export async function generateEmbedding(text: string): Promise<number[]> {
+  const command = new InvokeModelCommand({
+    modelId: 'amazon.titan-embed-text-v2:0',
+    contentType: 'application/json',
+    accept: 'application/json',
+    body: JSON.stringify({ inputText: text, dimensions: 1536, normalize: true }),
+  })
 
-                                                                                                                                                                                                                                                                                                                                                                                              const response = await client.send(command)
-                                                                                                                                                                                                                                                                                                                                                                                                const body = JSON.parse(new TextDecoder().decode(response.body)) as {
-                                                                                                                                                                                                                                                                                                                                                                                                    embedding: number[]
-                                                                                                                                                                                                                                                                                                                                                                                                      }
-                                                                                                                                                                                                                                                                                                                                                                                                        return body.embedding
-                                                                                                                                                                                                                                                                                                                                                                                                        }
+  const response = await client.send(command)
+  const body = JSON.parse(new TextDecoder().decode(response.body)) as {
+    embedding: number[]
+  }
+  return body.embedding
+}
 
-                                                                                                                                                                                                                                                                                                                                                                                                        // ── Types ───────────────────────────────────────────────────────────────────
+// Types
 
-                                                                                                                                                                                                                                                                                                                                                                                                        export interface TripData {
-                                                                                                                                                                                                                                                                                                                                                                                                          airline: string | null
-                                                                                                                                                                                                                                                                                                                                                                                                            flight_number: string | null
-                                                                                                                                                                                                                                                                                                                                                                                                              origin: string | null
-                                                                                                                                                                                                                                                                                                                                                                                                                destination: string | null
-                                                                                                                                                                                                                                                                                                                                                                                                                  depart_date: string | null
-                                                                                                                                                                                                                                                                                                                                                                                                                    return_date: string | null
-                                                                                                                                                                                                                                                                                                                                                                                                                      fare_class: string | null
-                                                                                                                                                                                                                                                                                                                                                                                                                        checked_bag_kg: number | null
-                                                                                                                                                                                                                                                                                                                                                                                                                          carry_on_kg: number | null
-                                                                                                                                                                                                                                                                                                                                                                                                                            trip_purpose: string | null
-                                                                                                                                                                                                                                                                                                                                                                                                                            }
+export interface TripData {
+  airline: string | null
+  flight_number: string | null
+  origin: string | null
+  destination: string | null
+  depart_date: string | null
+  return_date: string | null
+  fare_class: string | null
+  checked_bag_kg: number | null
+  carry_on_kg: number | null
+  trip_purpose: string | null
+}
 
-                                                                                                                                                                                                                                                                                                                                                                                                                            export interface PackingItem {
-                                                                                                                                                                                                                                                                                                                                                                                                                              name: string
-                                                                                                                                                                                                                                                                                                                                                                                                                                category: string
-                                                                                                                                                                                                                                                                                                                                                                                                                                  why: string
-                                                                                                                                                                                                                                                                                                                                                                                                                                    ai_suggested: boolean
-                                                                                                                                                                                                                                                                                                                                                                                                                                    }
-                                                                                                                                                                                                                                                                                                                                                                                                                                    }
+export interface PackingItem {
+  name: string
+  category: string
+  why: string
+  ai_suggested: boolean
+}
