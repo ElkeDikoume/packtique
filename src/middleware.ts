@@ -1,1 +1,0 @@
-// Replaced by src/proxy.ts — Next.js 16 uses proxy.ts / export function proxy()
