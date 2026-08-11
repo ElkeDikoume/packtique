@@ -1,165 +1,167 @@
 /**
- *  * POST /api/seed
-  *
-   * Seeds 4 demo past trips for the demo traveler (demo@packtique.ai).
-    * Generates real Titan V2 embeddings for each trip so vector similarity
-     * search works during the hackathon demo.
-      *
-       * Safe to call multiple times — uses ON CONFLICT to skip duplicates.
-        */
+ * POST /api/seed
+ *
+ * Seeds 4 demo past trips for the demo traveler (demo@packtique.ai).
+ * Generates real Titan V2 embeddings for each trip so vector similarity
+ * search works during the hackathon demo.
+ *
+ * Safe to call multiple times -- drops and recreates style_profiles table.
+ */
 
-        import { NextResponse } from 'next/server'
-        import { query } from '@/lib/db'
-        import { generateEmbedding } from '@/lib/bedrock'
+import { NextResponse } from 'next/server'
+import { query } from '@/lib/db'
+import { generateEmbedding } from '@/lib/bedrock'
 
-        export const maxDuration = 60
+export const maxDuration = 60
 
-        interface DemoTrip {
-          destination: string
-            season: string
-              trip_purpose: string
-                bag_brand: string
-                  bag_model: string
-                    service_tier: string
-                      item_categories: Record<string, number>
-                        packing_summary: string
-                        }
+interface DemoTrip {
+  destination: string
+  season: string
+  trip_purpose: string
+  bag_brand: string
+  bag_model: string
+  service_tier: string
+  item_categories: Record<string, number>
+  packing_summary: string
+}
 
-                        const DEMO_EMAIL = 'demo@packtique.ai'
+const DEMO_EMAIL = 'demo@packtique.ai'
 
-                        const DEMO_TRIPS: DemoTrip[] = [
-                          {
-                              destination: 'Paris (CDG)',
-                                  season: 'Fall',
-                                      trip_purpose: 'Leisure',
-                                          bag_brand: 'Rimowa',
-                                              bag_model: 'Essential Cabin',
-                                                  service_tier: 'Concierge',
-                                                      item_categories: { Clothing: 8, Electronics: 3, Toiletries: 4, Documents: 2 },
-                                                          packing_summary: 'City break, fashion-forward, light carry-on, lots of walking',
-                                                            },
-                                                              {
-                                                                  destination: 'Tokyo (NRT)',
-                                                                      season: 'Spring',
-                                                                          trip_purpose: 'Leisure',
-                                                                              bag_brand: 'Away',
-                                                                                  bag_model: 'The Carry-On',
-                                                                                      service_tier: 'Explorer',
-                                                                                          item_categories: { Clothing: 10, Electronics: 5, Toiletries: 3, Documents: 2 },
-                                                                                              packing_summary: 'Two-week Asia trip, tech-heavy, layered clothing for variable weather',
-                                                                                                },
-                                                                                                  {
-                                                                                                      destination: 'London (LHR)',
-                                                                                                          season: 'Winter',
-                                                                                                              trip_purpose: 'Business',
-                                                                                                                  bag_brand: 'Tumi',
-                                                                                                                      bag_model: 'Alpha 3',
-                                                                                                                          service_tier: 'Concierge',
-                                                                                                                              item_categories: { Clothing: 6, Electronics: 6, Toiletries: 2, Documents: 4 },
-                                                                                                                                  packing_summary: 'Business week, formal attire, heavy on documents and devices',
-                                                                                                                                    },
-                                                                                                                                      {
-                                                                                                                                          destination: 'Tulum (CUN)',
-                                                                                                                                              season: 'Summer',
-                                                                                                                                                  trip_purpose: 'Leisure',
-                                                                                                                                                      bag_brand: 'Samsonite',
-                                                                                                                                                          bag_model: 'Omni PC',
-                                                                                                                                                              service_tier: 'Explorer',
-                                                                                                                                                                  item_categories: { Clothing: 12, Electronics: 2, Toiletries: 6, Documents: 1 },
-                                                                                                                                                                      packing_summary: 'Beach holiday, swimwear-heavy, minimal electronics, lots of sunscreen',
-                                                                                                                                                                        },
-                                                                                                                                                                        ]
+const DEMO_TRIPS: DemoTrip[] = [
+  {
+    destination: 'Paris (CDG)',
+    season: 'Fall',
+    trip_purpose: 'Leisure',
+    bag_brand: 'Rimowa',
+    bag_model: 'Essential Cabin',
+    service_tier: 'Concierge',
+    item_categories: { Clothing: 8, Electronics: 3, Toiletries: 4, Documents: 2 },
+    packing_summary: 'City break, fashion-forward, light carry-on, lots of walking',
+  },
+  {
+    destination: 'Tokyo (NRT)',
+    season: 'Spring',
+    trip_purpose: 'Leisure',
+    bag_brand: 'Away',
+    bag_model: 'The Carry-On',
+    service_tier: 'Explorer',
+    item_categories: { Clothing: 10, Electronics: 5, Toiletries: 3, Documents: 2 },
+    packing_summary: 'Two-week Asia trip, tech-heavy, layered clothing for variable weather',
+  },
+  {
+    destination: 'London (LHR)',
+    season: 'Winter',
+    trip_purpose: 'Business',
+    bag_brand: 'Tumi',
+    bag_model: 'Alpha 3',
+    service_tier: 'Concierge',
+    item_categories: { Clothing: 6, Electronics: 6, Toiletries: 2, Documents: 4 },
+    packing_summary: 'Business week, formal attire, heavy on documents and devices',
+  },
+  {
+    destination: 'Tulum (CUN)',
+    season: 'Summer',
+    trip_purpose: 'Leisure',
+    bag_brand: 'Samsonite',
+    bag_model: 'Omni PC',
+    service_tier: 'Explorer',
+    item_categories: { Clothing: 12, Electronics: 2, Toiletries: 6, Documents: 1 },
+    packing_summary: 'Beach holiday, swimwear-heavy, minimal electronics, lots of sunscreen',
+  },
+]
 
-                                                                                                                                                                        export async function POST() {
-                                                                                                                                                                          const log: string[] = []
+export async function POST() {
+  const log: string[] = []
 
-                                                                                                                                                                            try {
-                                                                                                                                                                                // 1. Ensure schema is initialized
-                                                                                                                                                                                    await query(`CREATE TABLE IF NOT EXISTS users (
-                                                                                                                                                                                          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                                                                                                                                                                                                email TEXT UNIQUE NOT NULL,
-                                                                                                                                                                                                      created_at TIMESTAMPTZ DEFAULT now()
-                                                                                                                                                                                                          )`)
+  try {
+    // 1. Ensure users table exists
+    await query(`CREATE TABLE IF NOT EXISTS users (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      email TEXT UNIQUE NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`)
 
-                                                                                                                                                                                                              await query(`CREATE TABLE IF NOT EXISTS style_profiles (
-                                                                                                                                                                                                                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                                                                                                                                                                                                                          user_id UUID NOT NULL,
-                                                                                                                                                                                                                                trip_id UUID,
-                                                                                                                                                                                                                                      destination TEXT,
-                                                                                                                                                                                                                                            season TEXT,
-                                                                                                                                                                                                                                                  trip_purpose TEXT,
-                                                                                                                                                                                                                                                        bag_brand TEXT,
-                                                                                                                                                                                                                                                              bag_model TEXT,
-                                                                                                                                                                                                                                                                    service_tier TEXT,
-                                                                                                                                                                                                                                                                          item_categories JSONB,
-                                                                                                                                                                                                                                                                                embedding VECTOR(1536),
-                                                                                                                                                                                                                                                                                      created_at TIMESTAMPTZ DEFAULT now()
-                                                                                                                                                                                                                                                                                          )`)
+    // 2. Drop and recreate style_profiles with correct vector dimension
+    await query(`DROP TABLE IF EXISTS style_profiles`)
+    await query(`CREATE TABLE style_profiles (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL,
+      trip_id UUID,
+      destination TEXT,
+      season TEXT,
+      trip_purpose TEXT,
+      bag_brand TEXT,
+      bag_model TEXT,
+      service_tier TEXT,
+      item_categories JSONB,
+      embedding VECTOR(1024),
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`)
 
-                                                                                                                                                                                                                                                                                              log.push('Schema ready')
+    log.push('Schema ready')
 
-                                                                                                                                                                                                                                                                                                  // 2. Upsert demo user
-                                                                                                                                                                                                                                                                                                      const userRes = await query(
-                                                                                                                                                                                                                                                                                                            `INSERT INTO users (email) VALUES ($1)
-                                                                                                                                                                                                                                                                                                                   ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
-                                                                                                                                                                                                                                                                                                                          RETURNING id`,
-                                                                                                                                                                                                                                                                                                                                [DEMO_EMAIL]
-                                                                                                                                                                                                                                                                                                                                    )
-                                                                                                                                                                                                                                                                                                                                        const userId: string = userRes.rows[0].id
-                                                                                                                                                                                                                                                                                                                                            log.push(`Demo user id: ${userId}`)
+    // 3. Upsert demo user
+    const userRes = await query(
+      `INSERT INTO users (email) VALUES ($1)
+       ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
+       RETURNING id`,
+      [DEMO_EMAIL]
+    )
+    const userId: string = userRes.rows[0].id
+    log.push(`Demo user id: ${userId}`)
 
-                                                                                                                                                                                                                                                                                                                                                // 3. Seed each demo trip
-                                                                                                                                                                                                                                                                                                                                                    for (const trip of DEMO_TRIPS) {
-                                                                                                                                                                                                                                                                                                                                                          const profileText = [
-                                                                                                                                                                                                                                                                                                                                                                  `Destination: ${trip.destination}`,
-                                                                                                                                                                                                                                                                                                                                                                          `Season: ${trip.season}`,
-                                                                                                                                                                                                                                                                                                                                                                                  `Purpose: ${trip.trip_purpose}`,
-                                                                                                                                                                                                                                                                                                                                                                                          `Bag: ${trip.bag_brand} ${trip.bag_model}`,
-                                                                                                                                                                                                                                                                                                                                                                                                  `Service: ${trip.service_tier}`,
-                                                                                                                                                                                                                                                                                                                                                                                                          `Summary: ${trip.packing_summary}`,
-                                                                                                                                                                                                                                                                                                                                                                                                                  `Categories: ${Object.entries(trip.item_categories).map(([k, v]) => `${k}(${v})`).join(', ')}`,
-                                                                                                                                                                                                                                                                                                                                                                                                                        ].join('. ')
+    // 4. Seed each demo trip
+    for (const trip of DEMO_TRIPS) {
+      const profileText = [
+        `Destination: ${trip.destination}`,
+        `Season: ${trip.season}`,
+        `Purpose: ${trip.trip_purpose}`,
+        `Bag: ${trip.bag_brand} ${trip.bag_model}`,
+        `Service: ${trip.service_tier}`,
+        `Summary: ${trip.packing_summary}`,
+        `Categories: ${Object.entries(trip.item_categories).map(([k, v]) => `${k}(${v})`).join(', ')}`,
+      ].join('. ')
 
-                                                                                                                                                                                                                                                                                                                                                                                                                              const embedding = await generateEmbedding(profileText)
-                                                                                                                                                                                                                                                                                                                                                                                                                                    const embeddingStr = `[${embedding.join(',')}]`
+      const embedding = await generateEmbedding(profileText)
+      const embeddingStr = `[${embedding.join(',')}]`
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                          await query(
-                                                                                                                                                                                                                                                                                                                                                                                                                                                  `INSERT INTO style_profiles
-                                                                                                                                                                                                                                                                                                                                                                                                                                                            (user_id, destination, season, trip_purpose,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                       bag_brand, bag_model, service_tier, item_categories, embedding)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::vector)`,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        [
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  userId,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            trip.destination,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      trip.season,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                trip.trip_purpose,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          trip.bag_brand,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    trip.bag_model,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              trip.service_tier,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        JSON.stringify(trip.item_categories),
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  embeddingStr,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          ]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                )
+      await query(
+        `INSERT INTO style_profiles
+          (user_id, destination, season, trip_purpose,
+           bag_brand, bag_model, service_tier, item_categories, embedding)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::vector)`,
+        [
+          userId,
+          trip.destination,
+          trip.season,
+          trip.trip_purpose,
+          trip.bag_brand,
+          trip.bag_model,
+          trip.service_tier,
+          JSON.stringify(trip.item_categories),
+          embeddingStr,
+        ]
+      )
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      log.push(`Seeded: ${trip.destination} (${trip.season}, ${trip.trip_purpose})`)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          }
+      log.push(`Seeded: ${trip.destination} (${trip.season}, ${trip.trip_purpose})`)
+    }
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              // 4. Create HNSW index if it doesn't exist
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  await query(`
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        CREATE INDEX IF NOT EXISTS style_profiles_embedding_idx
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ON style_profiles USING hnsw (embedding vector_cosine_ops)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    `)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        log.push('Vector index ready')
+    // 5. Create HNSW index
+    await query(`
+      CREATE INDEX IF NOT EXISTS style_profiles_embedding_idx
+      ON style_profiles USING hnsw (embedding vector_cosine_ops)
+    `)
+    log.push('Vector index ready')
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            return NextResponse.json({
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  ok: true,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        demoUserId: userRes.rows[0].id,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              demoEmail: DEMO_EMAIL,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    seeded: DEMO_TRIPS.length,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          log,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              })
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                } catch (err) {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    console.error('Seed error:', err)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        return NextResponse.json({ ok: false, error: String(err), log }, { status: 500 })
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          }
+    return NextResponse.json({
+      ok: true,
+      demoUserId: userRes.rows[0].id,
+      demoEmail: DEMO_EMAIL,
+      seeded: DEMO_TRIPS.length,
+      log,
+    })
+  } catch (err) {
+    console.error('Seed error:', err)
+    return NextResponse.json({ ok: false, error: String(err), log }, { status: 500 })
+  }
+}
