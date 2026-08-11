@@ -1,40 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { extractBoardingPass, generatePackingList } from '@/lib/bedrock'
+import { extractBoardingPass, generatePackingList, generateEmbedding } from '@/lib/bedrock'
+import { query } from '@/lib/db'
+
+// Vercel: allow up to 60 s for Bedrock calls
+export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   try {
-    const formData = await req.formData()
-    const file = formData.get('file') as File | null
-    const text = formData.get('text') as string | null
+      const formData = await req.formData()
+          const file = formData.get('file') as File | null
+              const text = formData.get('text') as string | null
+                  const userId = formData.get('userId') as string | null
 
-    let content = text ?? ''
+                      let tripData
+                          const isImage = file?.type.startsWith('image/')
 
-    if (file) {
-      // For PDFs and text files, read as text
-      // For images, convert to base64 and include in prompt
-      const isImage = file.type.startsWith('image/')
-      if (isImage) {
-        const buffer = await file.arrayBuffer()
-        const base64 = Buffer.from(buffer).toString('base64')
-        content = `[Image boarding pass — base64: data:${file.type};base64,${base64.slice(0, 200)}...]`
-      } else {
-        content = await file.text()
-      }
-    }
+                              if (file && isImage) {
+                                    // Vision path: real Bedrock multimodal call
+                                          const buffer = await file.arrayBuffer()
+                                                const base64 = Buffer.from(buffer).toString('base64')
+                                                      tripData = await extractBoardingPass('', base64, file.type)
+                                                          } else if (file) {
+                                                                const fileText = await file.text()
+                                                                      if (!fileText.trim()) {
+                                                                              return NextResponse.json({ error: 'Uploaded file appears to be empty' }, { status: 400 })
+                                                                                    }
+                                                                                          tripData = await extractBoardingPass(fileText)
+                                                                                              } else if (text?.trim()) {
+                                                                                                    tripData = await extractBoardingPass(text)
+                                                                                                        } else {
+                                                                                                              return NextResponse.json({ error: 'No boarding pass content provided' }, { status: 400 })
+                                                                                                                  }
 
-    if (!content) {
-      return NextResponse.json({ error: 'No content provided' }, { status: 400 })
-    }
+                                                                                                                      // Pull style context from similar past trips (best-effort)
+                                                                                                                          let styleContext: string | undefined
+                                                                                                                              if (userId && tripData.destination) {
+                                                                                                                                    try {
+                                                                                                                                            const queryText = `Destination: ${tripData.destination}. Purpose: ${tripData.trip_purpose ?? 'Leisure'}.`
+                                                                                                                                                    const embedding = await generateEmbedding(queryText)
+                                                                                                                                                            const embeddingStr = `[${embedding.join(',')}]`
 
-    const tripData = await extractBoardingPass(content)
-    const packingItems = await generatePackingList(tripData)
+                                                                                                                                                                    const similarRes = await query(
+                                                                                                                                                                              `SELECT destination, season, trip_purpose, bag_brand, bag_model, service_tier, item_categories,
+                                                                                                                                                                                                1 - (embedding <=> $2::vector) AS similarity
+                                                                                                                                                                                                           FROM style_profiles
+                                                                                                                                                                                                                      WHERE user_id = $1
+                                                                                                                                                                                                                                 ORDER BY embedding <=> $2::vector
+                                                                                                                                                                                                                                            LIMIT 3`,
+                                                                                                                                                                                                                                                      [userId, embeddingStr]
+                                                                                                                                                                                                                                                              )
 
-    return NextResponse.json({ trip: tripData, items: packingItems })
-  } catch (err) {
-    console.error('Extract error:', err)
-    return NextResponse.json(
-      { error: 'Extraction failed', detail: String(err) },
-      { status: 500 }
-    )
-  }
-}
+                                                                                                                                                                                                                                                                      if (similarRes.rows.length > 0) {
+                                                                                                                                                                                                                                                                                styleContext = similarRes.rows
+                                                                                                                                                                                                                                                                                            .map((r, i) => {
+                                                                                                                                                                                                                                                                                                          const cats = typeof r.item_categories === 'string'
+                                                                                                                                                                                                                                                                                                                          ? JSON.parse(r.item_categories)
+                                                                                                                                                                                                                                                                                                                                          : r.item_categories
+                                                                                                                                                                                                                                                                                                                                                        const catSummary = Object.entries(cats as Record<string, number>)
+                                                                                                                                                                                                                                                                                                                                                                        .map(([k, v]) => `${k}: ${v} items`)
+                                                                                                                                                                                                                                                                                                                                                                                        .join(', ')
+                                                                                                                                                                                                                                                                                                                                                                                                      return `Past trip ${i + 1} (similarity ${(Number(r.similarity) * 100).toFixed(0)}%): ` +
+                                                                                                                                                                                                                                                                                                                                                                                                                      `${r.destination}, ${r.season}, ${r.trip_purpose}, ` +
+                                                                                                                                                                                                                                                                                                                                                                                                                                      `${r.bag_brand} ${r.bag_model} (${r.service_tier}) — ${catSummary}`
+                                                                                                                                                                                                                                                                                                                                                                                                                                                  })
+                                                                                                                                                                                                                                                                                                                                                                                                                                                              .join('\n')
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                      }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                            } catch {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    // DB not connected yet — skip style context silently
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              }
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  const packingItems = await generatePackingList(tripData, styleContext)
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      return NextResponse.json({ trip: tripData, items: packingItems })
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        } catch (err) {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            console.error('Extract error:', err)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                return NextResponse.json(
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      { error: 'Extraction failed', detail: String(err) },
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            { status: 500 }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                )
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  

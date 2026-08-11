@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { TripData, PackingItem } from '@/lib/bedrock'
+export const maxDuration = 30
 
 export async function POST(req: NextRequest) {
   try {
