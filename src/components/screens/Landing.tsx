@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Nav from '@/components/Nav'
 
 interface LandingProps {
@@ -39,6 +40,88 @@ const S: Record<string, React.CSSProperties> = {
     cursor: 'pointer', letterSpacing: '0.2px',
   },
   smallNote: { marginTop: 18, fontSize: 12, color: '#94A3B8', letterSpacing: '0.2px' },
+}
+
+// SVG icon components — brand navy #1B2D4F, 28×28 — Fix 2A
+function IconTicket() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1B2D4F" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="20" height="14" rx="2"/>
+      <path d="M2 10h20M8 5v2M16 5v2M8 15v2M16 15v2"/>
+    </svg>
+  )
+}
+
+function IconSparkles() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1B2D4F" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+      <path d="M20 3v4M22 5h-4M4 17v2M5 18H3"/>
+    </svg>
+  )
+}
+
+function IconLuggage() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1B2D4F" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="6" y="8" width="12" height="13" rx="2"/>
+      <path d="M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
+      <line x1="6" y1="13" x2="18" y2="13"/>
+      <line x1="10" y1="21" x2="10" y2="23"/>
+      <line x1="14" y1="21" x2="14" y2="23"/>
+    </svg>
+  )
+}
+
+function IconPackage() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1B2D4F" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/>
+      <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/>
+      <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>
+    </svg>
+  )
+}
+
+const STEP_ICONS = [<IconTicket />, <IconSparkles />, <IconLuggage />, <IconPackage />]
+
+// FAQ data — Fix 2C
+const FAQ_ITEMS = [
+  { q: 'What exactly does Packtique do?', a: 'You upload your boarding pass. Our AI reads your airline\'s baggage rules, builds a personalized packing list based on your destination, weather, and trip type, and a professional packer assembles and delivers everything TSA-compliant before you leave.' },
+  { q: 'Do I need to subscribe?', a: 'No. The AI packing list and baggage rule checker are always free. Explorer and Concierge are per-trip — you only pay when you book a service.' },
+  { q: 'How does the AI know what to pack for me?', a: 'It uses your boarding pass (airline, fare class, route, dates), destination weather, trip purpose, and your style profile — built from your past trips. The more you use it, the better the recommendations get.' },
+  { q: 'What cities do you currently serve?', a: 'We\'re launching in New York City first. Join the waitlist and you\'ll be notified when we expand to your city.' },
+  { q: 'What\'s the difference between Explorer and Concierge?', a: 'Explorer gives you an AI-built style profile, professional packing, and same-day delivery — everything most travelers need. Concierge adds a dedicated personal travel stylist who calls you before each trip, priority delivery, and white-glove unpacking at your destination.' },
+  { q: 'How far in advance do I need to book?', a: 'Explorer can be booked up to the morning of your departure for same-day delivery. Concierge works best with 48 hours notice so your stylist has time to curate properly.' },
+]
+
+function FaqAccordion() {
+  const [open, setOpen] = useState<number | null>(null)
+  return (
+    <div style={{ maxWidth: 680, margin: '0 auto' }}>
+      {FAQ_ITEMS.map((item, i) => (
+        <div key={i} style={{ borderBottom: '1px solid rgba(27,45,79,0.08)' }}>
+          <button
+            onClick={() => setOpen(open === i ? null : i)}
+            style={{
+              width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '20px 0', background: 'none', border: 'none', cursor: 'pointer',
+              textAlign: 'left' as const,
+            }}
+          >
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#1B2D4F', letterSpacing: '-0.2px', paddingRight: 16 }}>{item.q}</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
+              style={{ flexShrink: 0, transform: open === i ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </button>
+          {open === i && (
+            <p style={{ fontSize: 14, color: '#64748B', lineHeight: 1.7, paddingBottom: 20, margin: 0 }}>{item.a}</p>
+          )}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function PhoneFrame({ onStart }: { onStart: () => void }) {
@@ -147,7 +230,8 @@ export default function Landing({ onStart }: LandingProps) {
             </button>
           </div>
 
-          <p style={S.smallNote}>From $49/trip · No subscription required</p>
+          {/* Fix 1C: $49 → $59 */}
+          <p style={S.smallNote}>From $59/trip · No subscription required</p>
         </div>
 
         <div style={S.heroRight}>
@@ -155,13 +239,7 @@ export default function Landing({ onStart }: LandingProps) {
         </div>
       </section>
 
-      {/* Social proof strip */}
-      <div style={{ borderTop: '1px solid rgba(27,45,79,0.07)', borderBottom: '1px solid rgba(27,45,79,0.07)', padding: '18px 40px', display: 'flex', alignItems: 'center', gap: 40, background: '#fff', overflowX: 'auto' as const }}>
-        <span style={{ fontSize: 11, color: '#94A3B8', fontWeight: 600, letterSpacing: '1px', whiteSpace: 'nowrap' }}>TRUSTED PARTNERS</span>
-        {['Tumi', 'Away', 'Rimowa', 'Samsonite', 'Air France', 'Delta', 'United'].map(brand => (
-          <span key={brand} style={{ fontSize: 13, fontWeight: 700, color: '#B0BAC8', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>{brand}</span>
-        ))}
-      </div>
+      {/* Fix 1A: Removed fake TRUSTED PARTNERS strip (Tumi, Away, Rimowa, Samsonite, Air France, Delta, United) */}
 
       {/* How it works */}
       <section style={{ padding: '96px 40px', maxWidth: 1100, margin: '0 auto' }}>
@@ -171,15 +249,17 @@ export default function Landing({ onStart }: LandingProps) {
           <p style={{ fontSize: 16, color: '#64748B', maxWidth: 440, margin: '0 auto' }}>From ticket to doorstep — everything handled.</p>
         </div>
 
+        {/* Fix 2A: SVG icons replace emoji */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
           {[
-            { n: '01', title: 'Upload your ticket', body: 'Drop your boarding pass. AI extracts your airline, route, fare class, and exact baggage allowance in seconds.', icon: '✈️' },
-            { n: '02', title: 'AI builds your list', body: 'Weather, destination, trip type, your personal style profile. You review and approve.', icon: '🧠' },
-            { n: '03', title: 'Choose your bag', body: 'Curated options perfectly sized for your allowance, with a fit score for your exact item count.', icon: '🧳' },
-            { n: '04', title: 'We pack and deliver', body: 'A certified packer assembles everything, verifies TSA compliance on a certified scale, and delivers.', icon: '📦' },
-          ].map((step) => (
+            { n: '01', title: 'Upload your ticket', body: 'Drop your boarding pass. AI extracts your airline, route, fare class, and exact baggage allowance in seconds.' },
+            { n: '02', title: 'AI builds your list', body: 'Weather, destination, trip type, your personal style profile. You review and approve.' },
+            { n: '03', title: 'Choose your bag', body: 'Curated options perfectly sized for your allowance, with a fit score for your exact item count.' },
+            // Fix 1B: "certified packer" → "professional packer", "certified scale" → "calibrated scale"
+            { n: '04', title: 'We pack and deliver', body: 'A professional packer assembles everything, verifies TSA compliance on a calibrated scale, and delivers.' },
+          ].map((step, idx) => (
             <div key={step.n} style={{ background: '#fff', borderRadius: 16, padding: '28px 24px', border: '1px solid rgba(27,45,79,0.07)', transition: 'box-shadow 0.2s' }}>
-              <div style={{ fontSize: 28, marginBottom: 14 }}>{step.icon}</div>
+              <div style={{ marginBottom: 14 }}>{STEP_ICONS[idx]}</div>
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1.5px', color: '#C9A84C', marginBottom: 8 }}>{step.n}</div>
               <h3 style={{ fontSize: 15, fontWeight: 800, color: '#1B2D4F', marginBottom: 8, letterSpacing: '-0.3px' }}>{step.title}</h3>
               <p style={{ fontSize: 13, color: '#64748B', lineHeight: 1.6 }}>{step.body}</p>
@@ -197,9 +277,11 @@ export default function Landing({ onStart }: LandingProps) {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
           {[
-            { name: 'Essentials', price: 'Free', sub: 'always', features: ['AI packing list', 'Baggage rule checker', 'Destination weather', 'Shareable list'], cta: 'Start free', highlight: false },
-            { name: 'Explorer', price: '$49', sub: 'per trip', features: ['Everything in Essentials', 'Professional packing', 'TSA compliance check', 'Same-day delivery', 'Style profile building'], cta: 'Book Explorer', highlight: true },
-            { name: 'Concierge', price: '$149', sub: 'per trip', features: ['Everything in Explorer', 'Dedicated travel stylist', 'Priority delivery', 'Luggage storage option', 'White-glove unpacking'], cta: 'Book Concierge', highlight: false },
+            { name: 'Essentials', subtitle: '', price: 'Free', sub: 'always', features: ['AI packing list', 'Baggage rule checker', 'Destination weather', 'Shareable list'], cta: 'Start free', highlight: false },
+            // Fix 1C: $49 → $59 / Fix 2D: subtitle "AI style profile"
+            { name: 'Explorer', subtitle: 'AI style profile', price: '$59', sub: 'per trip', features: ['Everything in Essentials', 'Professional packing', 'TSA compliance check', 'Same-day delivery', 'Style profile building'], cta: 'Book Explorer', highlight: true },
+            // Fix 2D: subtitle "Personal travel stylist"
+            { name: 'Concierge', subtitle: 'Personal travel stylist', price: '$149', sub: 'per trip', features: ['Everything in Explorer', 'Dedicated travel stylist', 'Priority delivery', 'Luggage storage option', 'White-glove unpacking'], cta: 'Book Concierge', highlight: false },
           ].map(plan => (
             <div key={plan.name} style={{
               borderRadius: 16, padding: '28px 24px',
@@ -208,7 +290,10 @@ export default function Landing({ onStart }: LandingProps) {
               boxShadow: plan.highlight ? '0 20px 60px rgba(27,45,79,0.2)' : 'none',
             }}>
               {plan.highlight && <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1.5px', color: '#C9A84C', marginBottom: 14, textTransform: 'uppercase' }}>Most Popular</div>}
-              <div style={{ fontSize: 14, fontWeight: 700, color: plan.highlight ? '#fff' : '#1B2D4F', marginBottom: 4 }}>{plan.name}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: plan.highlight ? '#fff' : '#1B2D4F', marginBottom: 2 }}>{plan.name}</div>
+              {plan.subtitle && (
+                <div style={{ fontSize: 11, fontWeight: 600, color: plan.highlight ? 'rgba(201,168,76,0.8)' : '#0D7A70', marginBottom: 8, letterSpacing: '0.3px' }}>{plan.subtitle}</div>
+              )}
               <div style={{ fontSize: 38, fontWeight: 900, color: plan.highlight ? '#C9A84C' : '#1B2D4F', letterSpacing: '-1px', marginBottom: 2 }}>{plan.price}</div>
               <div style={{ fontSize: 12, color: plan.highlight ? 'rgba(255,255,255,0.4)' : '#94A3B8', marginBottom: 22 }}>{plan.sub}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
@@ -230,20 +315,74 @@ export default function Landing({ onStart }: LandingProps) {
         </div>
       </section>
 
-      {/* Footer CTA */}
-      <section style={{ background: '#1B2D4F', padding: '72px 40px', textAlign: 'center' }}>
-        <div style={{ maxWidth: 500, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 36, fontWeight: 900, color: '#fff', letterSpacing: '-0.8px', marginBottom: 14 }}>Ready to travel differently?</h2>
-          <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.5)', marginBottom: 28 }}>NYC launch coming. Join the waitlist or book a corporate demo.</p>
-          <div style={{ display: 'flex', gap: 10, maxWidth: 400, margin: '0 auto' }}>
-            <input type="email" placeholder="your@email.com" style={{
-              flex: 1, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
-              borderRadius: 8, padding: '12px 16px', color: '#fff', fontSize: 13,
-              outline: 'none'
-            }} />
-            <button style={{ background: '#C9A84C', color: '#1B2D4F', fontWeight: 700, fontSize: 13, padding: '12px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              Join waitlist
-            </button>
+      {/* Fix 2C: FAQ accordion */}
+      <section style={{ padding: '0 40px 96px', maxWidth: 920, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '2px', color: '#0D7A70', textTransform: 'uppercase', marginBottom: 12 }}>FAQ</div>
+          <h2 style={{ fontSize: 40, fontWeight: 900, color: '#1B2D4F', letterSpacing: '-1px' }}>Questions before you book.</h2>
+        </div>
+        <FaqAccordion />
+      </section>
+
+      {/* Fix 3A: Corporate B2B section */}
+      <section id="corporate" style={{ background: '#F4F7FB', padding: '80px 40px', borderTop: '1px solid rgba(27,45,79,0.07)' }}>
+        <div style={{ maxWidth: 840, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '2px', color: '#0D7A70', textTransform: 'uppercase', marginBottom: 12 }}>For Teams</div>
+            <h2 style={{ fontSize: 36, fontWeight: 900, color: '#1B2D4F', letterSpacing: '-0.8px', marginBottom: 16 }}>Corporate travel programs.</h2>
+            <p style={{ fontSize: 15, color: '#64748B', lineHeight: 1.7, marginBottom: 28 }}>
+              Packtique for teams: centralized billing, traveler profiles for your whole org, and dedicated account support. Built for frequent business travelers who can't afford packing mistakes.
+            </p>
+            <a href="mailto:corporate@packtique.com" style={{
+              display: 'inline-block', background: '#1B2D4F', color: '#fff', fontSize: 14, fontWeight: 700,
+              padding: '13px 28px', borderRadius: 8, textDecoration: 'none', letterSpacing: '0.2px',
+            }}>Book a demo →</a>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[
+              { icon: '👥', label: 'Team profiles', desc: 'One account for your entire travel program. Individual style profiles for every traveler.' },
+              { icon: '📊', label: 'Centralized billing', desc: 'Monthly invoicing, spend reports, and per-traveler breakdowns for finance.' },
+              { icon: '🔒', label: 'Policy compliance', desc: 'Enforce carry-on-only or specific bag weight limits across the whole team.' },
+            ].map(item => (
+              <div key={item.label} style={{ background: '#fff', borderRadius: 12, padding: '18px 20px', border: '1px solid rgba(27,45,79,0.07)', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 20 }}>{item.icon}</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1B2D4F', marginBottom: 3 }}>{item.label}</div>
+                  <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.5 }}>{item.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Fix 2B: Split footer CTA into waitlist + corporate paths */}
+      <section style={{ background: '#1B2D4F', padding: '72px 40px' }}>
+        <div style={{ maxWidth: 840, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, alignItems: 'center' }}>
+          {/* Waitlist path */}
+          <div style={{ borderRight: '1px solid rgba(255,255,255,0.1)', paddingRight: 40 }}>
+            <h2 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.6px', marginBottom: 10 }}>Be first in NYC.</h2>
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 22, lineHeight: 1.6 }}>Join the waitlist and get early access when we launch.</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input type="email" placeholder="your@email.com" style={{
+                flex: 1, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: 8, padding: '11px 14px', color: '#fff', fontSize: 13, outline: 'none',
+              }} />
+              <button style={{ background: '#C9A84C', color: '#1B2D4F', fontWeight: 700, fontSize: 13, padding: '11px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                Join waitlist
+              </button>
+            </div>
+          </div>
+          {/* Corporate path */}
+          <div style={{ paddingLeft: 40 }}>
+            <h2 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.6px', marginBottom: 10 }}>Corporate travel programs.</h2>
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginBottom: 22, lineHeight: 1.6 }}>Team accounts, centralized billing, and dedicated support.</p>
+            <a href="#corporate" style={{
+              display: 'inline-block', background: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 700, fontSize: 13,
+              padding: '11px 22px', borderRadius: 8, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)',
+            }}>
+              Learn more →
+            </a>
           </div>
         </div>
       </section>
