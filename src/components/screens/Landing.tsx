@@ -313,7 +313,7 @@ export default function Landing({ onStart }: LandingProps) {
           {/* Right â professional packing photo */}
           <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden' }}>
             <img
-              src="https://images.unsplash.com/photo-1590650153855-d9e808231d41?w=800&q=75"
+              src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/DHS_Agencies_Support_Super_Bowl_LIX_Security_February_2025_-_117.jpg/1280px-DHS_Agencies_Support_Super_Bowl_LIX_Security_February_2025_-_117.jpg"
               alt="Airport security checkpoint"
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
@@ -405,8 +405,7 @@ export default function Landing({ onStart }: LandingProps) {
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#1B2D4F', marginBottom: 3 }}>{item.label}</div>
                   <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.5 }}>{item.desc}</div>
                 </div>
-   
-             </div>
+              </div>
             ))}
           </div>
         </div>
