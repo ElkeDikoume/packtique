@@ -46,7 +46,7 @@ const S: Record<string, React.CSSProperties> = {
 const STEP_PHOTOS = [
   'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=600&q=75', // airplane / boarding
   'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=600&q=75', // clothing flat lay
-  'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&q=75', // carry-on luggage
+  'https://images.unsplash.com/photo-1565026057447-bc90a3dceb87?w=600&q=75', // row of suitcases
   'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=75', // doorstep / delivery
 ]
 
@@ -313,8 +313,8 @@ export default function Landing({ onStart }: LandingProps) {
           {/* Right â professional packing photo */}
           <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden' }}>
             <img
-              src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&q=75"
-              alt="Professional packing"
+              src="https://images.unsplash.com/photo-1590650153855-d9e808231d41?w=800&q=75"
+              alt="Airport security checkpoint"
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(201,168,76,0.35) 0%, transparent 70%)' }} />
@@ -405,7 +405,8 @@ export default function Landing({ onStart }: LandingProps) {
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#1B2D4F', marginBottom: 3 }}>{item.label}</div>
                   <div style={{ fontSize: 12, color: '#64748B', lineHeight: 1.5 }}>{item.desc}</div>
                 </div>
-              </div>
+   
+             </div>
             ))}
           </div>
         </div>
